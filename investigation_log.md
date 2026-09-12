@@ -4,27 +4,8 @@
 
 Reproduce Finance's `target_base` of **22** for merchant 501 for October 2026 across communication type `2` campaigns.
 
-I intentionally started from the raw communication-log count without assuming why Finance's number was lower. Each step below records the question being tested, what the data showed, and whether the result changed the reconciliation.
-
----
-
-## Investigation mindset
-
-The starting question was not **"How do I get 22?"** but:
-
-> **"Why does the most obvious count disagree with Finance's 22?"**
-
-I treated the difference as a reconciliation problem and tested several possible sources of mismatch:
-
-1. Reporting eligibility
-2. Retry relationships
-3. Customer-level duplicate attempts
-4. Standalone repeated sends
-5. Date and communication-type scope
-6. Delivery status
-7. Join/key integrity
-
-Some checks produced an adjustment; others produced **zero adjustment** but were retained because they ruled out plausible explanations.
+The log starts with the raw communication count and records the checks used to
+explain the difference from Finance's number.
 
 ---
 
@@ -56,7 +37,7 @@ This is the most direct interpretation of "number of sends" at the raw-log level
 
 ---
 
-## 2. Hypothesis: some logged campaigns may not be reportable
+## 2. Campaign eligibility
 
 ### Question
 
@@ -92,7 +73,7 @@ Exclude campaign 9004's four records from the reportable population.
 
 ---
 
-## 3. Hypothesis: retry attempts are being counted as separate communications
+## 3. Retry family
 
 ### Question
 
@@ -102,7 +83,7 @@ Could multiple communication-log rows belong to the same underlying communicatio
 
 Followed `campaign.parent_id` recursively so that a chain such as `9001 → 9002 → 9003` is treated as one retry family.
 
-I also applied campaign eligibility to each contributing campaign rather than assuming that a root campaign's status automatically makes every child reportable.
+Campaign eligibility was applied to each contributing campaign rather than assuming that a root campaign's status automatically makes every child reportable.
 
 ### Important intermediate check
 
@@ -142,15 +123,15 @@ Deduplicate customers **within the retry family**, because retries represent rep
 
 ---
 
-## 4. Remaining gap: inspect the second retry family
+## 4. Second retry family
 
 ### Question
 
-After the first retry adjustment, why is the result still one above Finance?
+The first retry adjustment leaves one remaining difference from Finance.
 
 ### Test
 
-Inspect the other root campaign with a retry child.
+The other root campaign with a retry child is `9201`.
 
 ### Observation
 
@@ -177,17 +158,15 @@ At this point the reconciliation reaches Finance's **22**.
 
 ---
 
-## 5. Challenge the deduplication hypothesis with a standalone campaign
+## 5. Standalone repeated send
 
 ### Question
 
-Should every repeated customer be deduplicated globally?
-
-This is a deliberate challenge to the previous conclusion. If the answer were simply `COUNT(DISTINCT customer_id)`, the standalone campaign could also be reduced.
+The retry rule should not be applied globally. A global `COUNT(DISTINCT customer_id)` would also reduce the standalone campaign.
 
 ### Test
 
-Inspect campaign `9101`, which has no retry child.
+Campaign `9101` has no retry child.
 
 ### Observation
 
@@ -212,23 +191,17 @@ Therefore:
 
 **0**
 
-### Why this check matters
-
-Without this check, a global `COUNT(DISTINCT customer_id)` could incorrectly remove one legitimate event and produce **21** instead of Finance's **22**.
-
-This is also why the final logic is not simply "count distinct customers everywhere."
-
 ---
 
-## 6. Alternative explanation tested: date scope
+## 6. Date scope
 
 ### Question
 
-Could records outside October be contaminating the baseline?
+Records outside October could have affected the baseline.
 
 ### Test
 
-Checked the minimum and maximum `sent_time` for merchant 501 and compared the total merchant rows with the October-scoped count.
+The minimum and maximum `sent_time` for merchant 501 were compared with the October-scoped count.
 
 ### Result
 
@@ -247,11 +220,11 @@ The date filter is not responsible for the 8-row gap.
 
 ---
 
-## 7. Alternative explanation tested: communication type
+## 7. Communication type
 
 ### Question
 
-Could other communication types be mixed into the raw population?
+Other communication types could have been mixed into the raw population.
 
 ### Result
 
@@ -269,11 +242,11 @@ The communication-type filter is correct but does not reduce the baseline.
 
 ---
 
-## 8. Alternative explanation tested: delivery status
+## 8. Delivery status
 
 ### Question
 
-Should failed sends be excluded from `target_base`?
+Failed sends could have been excluded from `target_base`.
 
 ### Result
 
@@ -298,11 +271,11 @@ Do **not** exclude failed records merely because their delivery status is failed
 
 ---
 
-## 9. Alternative explanation tested: join/key integrity
+## 9. Join and key integrity
 
 ### Question
 
-Could broken references or duplicate campaign IDs be creating incorrect joins?
+Broken references or duplicate campaign IDs could have affected the joins.
 
 ### Tests
 
