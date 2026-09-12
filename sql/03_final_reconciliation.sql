@@ -1,19 +1,12 @@
--- Xeno Data Analyst Assignment
--- Comm-Log Send Reconciliation
---
 -- Final reconciliation of Finance target_base for:
 -- Merchant 501
 -- October 2026
 -- Communication type 2
 
 
--- ============================================================
 -- Build the campaign hierarchy
--- ============================================================
 
 WITH RECURSIVE campaign_tree AS (
-
-    -- Root campaigns
     SELECT
         id AS campaign_id,
         id AS root_campaign_id
@@ -21,8 +14,6 @@ WITH RECURSIVE campaign_tree AS (
     WHERE parent_id IS NULL
 
     UNION ALL
-
-    -- Follow retry relationships
     SELECT
         c.id AS campaign_id,
         ct.root_campaign_id
@@ -32,9 +23,7 @@ WITH RECURSIVE campaign_tree AS (
 ),
 
 
--- ============================================================
 -- Keep only reportable communication records
--- ============================================================
 
 eligible_logs AS (
 
@@ -61,9 +50,7 @@ eligible_logs AS (
 ),
 
 
--- ============================================================
 -- Classify each root as retry family or standalone
--- ============================================================
 
 root_types AS (
 
@@ -82,10 +69,7 @@ root_types AS (
     WHERE r.parent_id IS NULL
 ),
 
-
--- ============================================================
 -- Apply target_base counting rule
--- ============================================================
 
 reconciled AS (
 
@@ -111,10 +95,7 @@ reconciled AS (
 )
 
 
--- ============================================================
 -- Final result
--- ============================================================
-
 SELECT
     SUM(target_base) AS target_base
 FROM reconciled;

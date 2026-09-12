@@ -1,19 +1,8 @@
--- Xeno Data Analyst Assignment
--- Comm-Log Send Reconciliation
---
 -- Investigation queries used to explain the gap between the
 -- naive communication-log count (30) and Finance target_base (22).
---
--- The sections are intentionally ordered as an investigation:
--- establish the population, test eligibility, investigate retries,
--- challenge the deduplication rule, then validate scope and joins.
 
-
--- ============================================================
 -- 1. Establish the campaign population and eligibility
--- ============================================================
--- Question: Are all campaigns represented in communication_log
--- actually reportable?
+-- Question: Are all campaigns represented in communication_log actually reportable?
 
 SELECT
     id,
@@ -36,9 +25,7 @@ FROM campaign
 ORDER BY id;
 
 
--- ============================================================
 -- 2. Quantify communication rows contributed by each campaign
--- ============================================================
 -- Question: Which campaigns are responsible for the raw count?
 -- This makes any status-based adjustment measurable.
 
@@ -61,17 +48,8 @@ GROUP BY
 ORDER BY c.id;
 
 
--- ============================================================
 -- 3. Test the retry-family hypothesis
--- ============================================================
--- Question: Could multiple log rows represent retry attempts
--- belonging to one underlying communication?
---
--- A recursive CTE is used because retry chains can be more than
--- one level deep (for example A -> B -> C).
---
--- Eligibility is applied to each campaign contributing log rows,
--- rather than only to the root campaign.
+-- Question: Could multiple log rows represent retry attempts belonging to one underlying communication?
 
 WITH RECURSIVE campaign_tree AS (
     SELECT
@@ -109,16 +87,8 @@ GROUP BY ct.root_campaign_id
 ORDER BY ct.root_campaign_id;
 
 
--- ============================================================
 -- 4. Inspect retry behavior at customer level
--- ============================================================
--- Question: Is the difference between attempts and distinct
--- customers actually caused by retry sequences?
---
--- This exposes examples such as:
--- C2: 9001 failed -> 9002 delivered
--- C3: 9001 failed -> 9002 failed -> 9003 delivered
--- D1: 9201 failed -> 9202 delivered
+-- Question: Is the difference between attempts and distinct customers actually caused by retry sequences?
 
 WITH RECURSIVE campaign_tree AS (
     SELECT
@@ -164,15 +134,9 @@ ORDER BY
     cl.customer_id;
 
 
--- ============================================================
 -- 5. Challenge the deduplication hypothesis
--- ============================================================
 -- Question: Should every repeated customer be deduplicated?
---
--- The standalone campaign 9101 is deliberately inspected separately.
--- C20 appears twice in the same standalone campaign. This is not
--- a retry because no child campaign represents a retry of 9101.
--- Therefore these remain two separate send events.
+
 
 SELECT
     communication_id AS campaign_id,
@@ -185,11 +149,8 @@ GROUP BY communication_id, customer_id
 HAVING COUNT(*) > 1;
 
 
--- ============================================================
 -- 6. Validate the requested date scope
--- ============================================================
--- Question: Could records outside October be contaminating the
--- starting population?
+-- Question: Could records outside October be contaminating the starting population?
 
 SELECT
     MIN(sent_time) AS earliest_sent_time,
@@ -207,11 +168,8 @@ FROM communication_log
 WHERE merchant_id = 501;
 
 
--- ============================================================
 -- 7. Validate communication type and delivery status
--- ============================================================
--- Question: Is communication_type filtering out anything, and
--- should failed rows be excluded?
+-- Question: Is communication_type filtering out anything, and should failed rows be excluded?
 
 SELECT
     communication_type,
@@ -227,9 +185,7 @@ ORDER BY
     delivery_status;
 
 
--- ============================================================
 -- 8. Validate referential integrity
--- ============================================================
 -- Question: Could missing campaign references distort the join?
 
 SELECT
@@ -240,9 +196,7 @@ LEFT JOIN campaign c
 WHERE c.id IS NULL;
 
 
--- ============================================================
 -- 9. Validate campaign-key uniqueness
--- ============================================================
 -- Question: Could duplicate campaign IDs create join multiplication?
 
 SELECT

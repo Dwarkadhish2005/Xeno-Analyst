@@ -1,6 +1,3 @@
--- Xeno Data Analyst Assignment
--- Comm-Log Send Reconciliation
---
 -- Baseline:
 -- Count all October communication-log records for merchant 501
 -- where communication_type = '2'.
