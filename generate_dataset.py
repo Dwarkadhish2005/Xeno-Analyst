@@ -14,15 +14,15 @@ Scenario: merchant_id=501, October 2026, two campaign "families" that retry
 standalone ("leaf") campaign with a legitimately repeated customer send.
 
 This script only WRITES the raw data. It does not compute any aggregate or
-target number — see compute_ground_truth.py for the independent
-reconciliation, run separately against this same output.
+target number — see sql/03_final_reconciliation.sql for the final
+reconciliation query.
 """
 
 import csv
 import sqlite3
 from pathlib import Path
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 MERCHANT_ID = 501
