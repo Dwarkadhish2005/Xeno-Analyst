@@ -3,9 +3,6 @@
 -- October 2026
 -- Communication type 2
 
-
--- Build the campaign hierarchy
-
 WITH RECURSIVE campaign_tree AS (
     SELECT
         id AS campaign_id,
