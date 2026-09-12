@@ -3,7 +3,6 @@
 
 -- 1. Establish the campaign population and eligibility
 -- Question: Are all campaigns represented in communication_log actually reportable?
-
 SELECT
     id,
     name,
@@ -27,8 +26,6 @@ ORDER BY id;
 
 -- 2. Quantify communication rows contributed by each campaign
 -- Question: Which campaigns are responsible for the raw count?
--- This makes any status-based adjustment measurable.
-
 SELECT
     c.id AS campaign_id,
     c.name,
